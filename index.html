@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>美食物语 · Web3D 厨房</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8D%B3%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="./src/style.css">
+    <script>
+        (function () {
+            window.__bootOk = false;
+            function showFatal(message) {
+                var box = document.getElementById('fatal');
+                if (!box) {
+                    return;
+                }
+                box.textContent = String(message);
+                box.classList.remove('hidden');
+            }
+            window.showFatal = showFatal;
+            window.addEventListener('error', function (event) {
+                if (window.__bootOk) {
+                    return;
+                }
+                var where = event && event.filename ? '（' + String(event.filename).split('/').pop() + ':' + event.lineno + '）' : '';
+                showFatal('启动出错：' + ((event && event.message) || '未知错误') + where);
+            });
+            window.addEventListener('unhandledrejection', function (event) {
+                if (window.__bootOk) {
+                    return;
+                }
+                var reason = event && event.reason;
+                showFatal('启动出错：' + ((reason && reason.message) || reason));
+            });
+            window.setTimeout(function () {
+                if (!window.__bootOk) {
+                    showFatal('启动超时：画面没有出来。请按 Ctrl+Shift+R 强制刷新；如果仍停在这里，请把这段红字发给我。');
+                }
+            }, 15000);
+        })();
+    </script>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    <div id="fatal" class="fatal hidden"></div>
+
+    <div id="hud" class="hidden">
+        <div id="crosshair"></div>
+        <div id="floaters"></div>
+
+        <div id="topbar">
+            <div class="topbar-info">
+                <div class="info-head">
+                    <span class="scene-label">厨房</span>
+                    <span id="level" class="level-badge">Lv.1</span>
+                </div>
+                <span id="stats" class="stats">食材 0/8 · 料理 0/6</span>
+                <div class="exp-track"><div id="exp-bar"></div></div>
+            </div>
+            <div class="topbar-buttons">
+                <button id="btn-sound" class="chip" type="button" title="开关音效">🔊</button>
+                <button id="btn-gallery" class="chip" type="button">图鉴</button>
+                <button id="btn-menu" class="chip" type="button">菜单</button>
+            </div>
+        </div>
+
+        <div id="hint" class="hint"></div>
+        <div id="action" class="hidden">
+            <span id="action-label"></span>
+            <div class="action-track"><div id="action-bar"></div></div>
+        </div>
+        <div id="hand" class="hand"></div>
+
+        <div id="daily">
+            <div id="daily-title">今日菜单 0/0</div>
+            <div id="daily-list"></div>
+        </div>
+
+        <div id="hotbar" class="hotbar">
+            <div class="hotbar-head">
+                <span>物品栏</span>
+                <small id="hotbar-status">空</small>
+            </div>
+            <div id="hotbar-slots" class="hotbar-slots"></div>
+            <div class="hotbar-tip">冰箱拿食材 → 切菜板切碎 → 灶台开火 → 空盘装盘 → 端上餐桌</div>
+        </div>
+
+        <div id="lock-tip" class="lock-tip hidden">点击此处继续下厨</div>
+
+        <div id="toasts" class="toasts"></div>
+        <div class="control-tip">
+            <span class="tip-pointer">
+                <span>移动鼠标转视角</span>
+                <span>W A S D 移动</span>
+                <span>左键交互</span>
+                <span>数字键 1-6 切换物品</span>
+                <span>Q 放回</span>
+                <span>Ctrl 下蹲（再按一次站起）</span>
+                <span>E 图鉴</span>
+                <span>M 菜单</span>
+            </span>
+            <span class="tip-touch">
+                <span>单指滑动转视角</span>
+                <span>双指拖动移动</span>
+                <span>点击交互</span>
+                <span>底部物品栏点一下即可切换</span>
+            </span>
+        </div>
+    </div>
+
+    <div id="menu" class="overlay">
+        <div class="panel">
+            <h1 class="game-title">美食物语</h1>
+            <p class="subtitle">菜需慢慢做，心急则坏菜</p>
+            <div class="menu-actions">
+                <button id="btn-start" class="chip primary wide" type="button">开始下厨</button>
+                <button id="btn-gallery-menu" class="chip wide" type="button">查看图鉴</button>
+                <button id="btn-reset" class="chip ghost wide" type="button">重置进度</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gallery" class="overlay hidden">
+        <div class="panel wide-panel">
+            <div class="panel-head">
+                <h2>美食物语图鉴</h2>
+                <button id="btn-gallery-close" class="chip" type="button">关闭</button>
+            </div>
+            <p id="gallery-stats" class="subtitle gallery-stats"></p>
+            <h3 class="section-title">食材 <span id="gallery-ingredient-count"></span></h3>
+            <div id="gallery-ingredients" class="card-grid"></div>
+            <h3 class="section-title">料理 <span id="gallery-recipe-count"></span></h3>
+            <div id="gallery-recipes" class="card-grid"></div>
+        </div>
+    </div>
+
+    <div id="card" class="overlay hidden">
+        <div class="panel card-panel">
+            <p id="card-kicker">LEVEL UP</p>
+            <h2 id="card-title">Lv.2</h2>
+            <p id="card-sub" class="subtitle"></p>
+            <div id="card-items" class="card-items"></div>
+            <button id="btn-card-close" class="chip primary wide" type="button">继续下厨</button>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
